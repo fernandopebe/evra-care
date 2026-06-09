@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#f7eef3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:12px}
+#app{display:flex;flex-direction:column;height:660px;width:100%;max-width:480px;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 8px 32px rgba(212,83,126,0.18)}
+#hdr{background:linear-gradient(135deg,#D4537E,#e87fa8);padding:14px 18px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+#hdr-icon{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.22);display:flex;align-items:center;justify-content:center;font-size:18px}
+#hdr-title{font-size:15px;font-weight:600;color:#fff}
+#hdr-sub{font-size:11px;color:rgba(255,255,255,0.82);margin-top:1px}
+#status{background:#fdf0f5;border-bottom:1px solid #f5d5e5;padding:8px 18px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+#status-dot{width:8px;height:8px;border-radius:50%;background:#1D9E75;flex-shrink:0;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+#status-txt{font-size:11px;color:#8a5068;flex:1;line-height:1.4}
+#msgs{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth}
+.msg{max-width:90%;display:flex;flex-direction:column;gap:3px}
+.msg.user{align-self:flex-end;align-items:flex-end}
+.msg.bot{align-self:flex-start;align-items:flex-start}
+.bubble{padding:10px 14px;border-radius:16px;font-size:13px;line-height:1.6;word-break:break-word}
+.msg.user .bubble{background:linear-gradient(135deg,#D4537E,#e87fa8);color:#fff;border-bottom-right-radius:4px}
+.msg.bot .bubble{background:#f8f8f8;color:#333;border:1px solid #eee;border-bottom-left-radius:4px}
+.msg.bot .bubble.cal{background:#E1F5EE;border-color:#5DCAA5;color:#085041}
+.msg.bot .bubble.warn{background:#FAEEDA;border-color:#FAC775;color:#633806}
+.msg.bot .bubble.alert{background:#FDECEA;border-color:#F28B82;color:#6B1A15}
+.ts{font-size:10px;color:#bbb}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:2px;max-width:90%}
+.chip{font-size:11.5px;padding:5px 12px;border-radius:20px;border:1px solid #f0c0d4;background:#fff5f9;color:#c04070;cursor:pointer;transition:all .15s}
+.chip:hover{background:#f9d5e5;border-color:#D4537E}
+.dot-wrap{display:flex;gap:4px;align-items:center;padding:10px 14px}
+.dot-wrap span{width:6px;height:6px;border-radius:50%;background:#D4537E;animation:bop 1.2s infinite}
+.dot-wrap span:nth-child(2){animation-delay:.2s}
+.dot-wrap span:nth-child(3){animation-delay:.4s}
+@keyframes bop{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+#qbar{padding:7px 14px 5px;display:flex;gap:5px;flex-wrap:wrap;flex-shrink:0;border-top:1px solid #f5d5e5;background:#fff}
+.qbtn{font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid #f0c0d4;background:#fff5f9;color:#c04070;cursor:pointer;white-space:nowrap;transition:all .15s}
+.qbtn:hover{background:#f9d5e5}
+.qbtn.g{border-color:#5DCAA5;color:#0F6E56;background:#E1F5EE}
+.qbtn.g:hover{background:#9FE1CB}
+#inputrow{padding:10px 14px;display:flex;gap:8px;align-items:flex-end;border-top:1px solid #f5d5e5;flex-shrink:0;background:#fff}
+#inp{flex:1;resize:none;min-height:36px;max-height:90px;padding:8px 14px;font-size:13px;border-radius:18px;border:1.5px solid #f0c0d4;background:#fff5f9;color:#333;font-family:inherit;line-height:1.4;overflow-y:auto;transition:border .2s}
+#inp:focus{outline:none;border-color:#D4537E}
+#inp:disabled{opacity:.5}
+#sendbtn{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#D4537E,#e87fa8);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .15s;color:#fff;font-size:14px}
+#sendbtn:hover{opacity:.85}
+#sendbtn:disabled{opacity:.4;cursor:not-allowed}
+.zone-tag{display:inline-block;background:#fce4ec;color:#c2185b;border-radius:8px;padding:2px 8px;font-size:11px;font-weight:600;margin:2px 0}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hdr">
+    <div id="hdr-icon">🩹</div>
+    <div>
+      <div id="hdr-title">EVRA Care · Hola, Lucerito 💕</div>
+      <div id="hdr-sub">Asistente personal · Lima, Perú · UTC−5</div>
+    </div>
+  </div>
+  <div id="status">
+    <div id="status-dot"></div>
+    <span id="status-txt">Calculando próximo evento...</span>
+  </div>
+  <div id="msgs"></div>
+  <div id="qbar">
+    <button class="qbtn" onclick="q('¿Cuándo es mi próximo cambio y en qué zona va?')">📅 Próximo cambio</button>
+    <button class="qbtn" onclick="q('¿Cómo coloco bien el parche en la zona de hoy?')">📍 Cómo colocarlo</button>
+    <button class="qbtn" onclick="q('Tengo irritación donde estaba el parche, ¿qué hago?')">🩹 Irritación</button>
+    <button class="qbtn" onclick="q('Tengo dolor de cabeza desde que empecé el parche')">🤕 Dolor de cabeza</button>
+    <button class="qbtn" onclick="q('Me siento muy sensible emocionalmente, ¿es normal con el EVRA?')">💭 Sensibilidad</button>
+    <button class="qbtn" onclick="q('Olvidé cambiar el parche, ¿qué hago?')">⚠️ Olvidé el cambio</button>
+  </div>
+  <div id="inputrow">
+    <textarea id="inp" placeholder="Escríbeme tu consulta sobre EVRA…" rows="1"></textarea>
+    <button id="sendbtn" onclick="send()"><i class="fa fa-paper-plane"></i></button>
+  </div>
+</div>
+
+<script>
+const SYS = `Eres EVRA Care, el asistente personal de Lucerito para el seguimiento de su parche anticonceptivo EVRA®.
+Luis es su pareja y quien configuró este asistente con mucho amor. Puedes saludar a Luis si se identifica, pero el asistente está centrado en el cuidado de Lucerito.
+
+PERSONALIDAD: Cálida, cercana, empática, como una amiga de confianza que sabe de salud. Usa emojis con moderación (1-2 por mensaje). Respuestas CORTAS y claras: máximo 5-6 líneas. Sin relleno.
+
+ALCANCE ESTRICTO: Solo EVRA®, parche, ciclo, recordatorios, síntomas relacionados con el parche, anticoncepción hormonal de parche, zonas de aplicación, irritación cutánea, efectos secundarios del parche.
+Si preguntan algo fuera de alcance, responde: "Mi foco es el cuidado con EVRA® 💊 Para eso estoy aquí."
+
+PERFIL DE LUCERITO:
+- 30 años, contextura delgada, Lima Perú
+- Antecedente de TAQUICARDIA — muy importante para síntomas cardiovasculares
+- Evita métodos intravaginales
+- Preocupación por aumento de peso
+- Sensibilidad emocional en ciertas fases del ciclo
+- Tendencia a olvidar tareas → refuerza recordatorios con amabilidad, NUNCA con culpa
+- Primera vez usando el parche EVRA
+
+CALENDARIO COMPLETO CON ZONAS DE APLICACIÓN (hora: 20:00 Lima):
+Ciclo 1:
+- 09/06/2026 → Colocar Parche #1 → ZONA: Brazo superior externo DERECHO
+- 16/06/2026 → Cambiar a Parche #2 → ZONA: Brazo superior externo IZQUIERDO
+- 23/06/2026 → Cambiar a Parche #3 → ZONA: Brazo superior externo DERECHO (último en brazo)
+- 30/06/2026 → RETIRAR parche → Inicio semana de descanso (sin zona)
+
+Ciclo 2:
+- 07/07/2026 → Colocar Parche #1 → ZONA: Abdomen inferior derecho
+- 14/07/2026 → Cambiar a Parche #2 → ZONA: Glúteo izquierdo
+- 21/07/2026 → Cambiar a Parche #3 → ZONA: Muslo externo derecho
+- 28/07/2026 → RETIRAR parche → Semana de descanso
+
+Ciclo 3:
+- 04/08/2026 → Colocar Parche #1 → ZONA: Abdomen inferior izquierdo
+- 11/08/2026 → Cambiar a Parche #2 → ZONA: Glúteo derecho
+- 18/08/2026 → Cambiar a Parche #3 → ZONA: Muslo externo izquierdo
+- 25/08/2026 → RETIRAR parche → Semana de descanso
+
+Ciclo 4:
+- 01/09/2026 → Colocar Parche #1 → ZONA: Espalda baja derecha (zona escapular baja)
+- 08/09/2026 → Cambiar a Parche #2 → ZONA: Abdomen inferior derecho
+- 15/09/2026 → Cambiar a Parche #3 → ZONA: Glúteo izquierdo
+- 22/09/2026 → RETIRAR parche → Semana de descanso
+
+REGLAS DE ROTACIÓN DE ZONAS:
+- Nunca repetir la misma zona en cambios consecutivos
+- Las primeras 3 aplicaciones van en el brazo (inicio suave, fácil de monitorear)
+- A partir del Ciclo 2 se rotan zonas más discretas y cómodas
+- Piel limpia, seca, sin cremas ni vello en la zona de aplicación
+- Evitar zonas con rozamiento frecuente de ropa
+
+GUÍA DE APLICACIÓN POR ZONA:
+BRAZO SUPERIOR EXTERNO:
+- Limpiar con agua y jabón suave, secar bien
+- Colocar en la parte externa del brazo, entre hombro y codo
+- Presionar con la palma durante 30 segundos
+- Evitar mangas muy ajustadas que friccionen el parche
+- Revisar bordes al cambiar de ropa
+
+ABDOMEN INFERIOR:
+- Zona plana, 2 dedos por debajo del ombligo
+- Evitar el área del ombligo y cintura del pantalón
+- Presionar firmemente 30 segundos
+- Cuidado con la cinturilla de ropa interior o jeans
+
+GLÚTEO:
+- Cuadrante superior externo del glúteo
+- Muy discreta, ideal cuando hace calor
+- Evitar zona donde roza la ropa interior
+- Presionar bien en la curva del glúteo
+
+MUSLO EXTERNO:
+- Parte externa del muslo, tercio superior
+- Evitar zona interna (fricción al caminar)
+- Buena para usar con faldas o shorts
+- Presionar 30 segundos con la pierna relajada
+
+ESPALDA BAJA:
+- Zona escapular baja o lumbar alta
+- Necesita ayuda de alguien (Luis puede ayudar 💕)
+- Muy cómoda para dormir
+- Evitar la línea de la correa del sujetador
+
+MANEJO DE IRRITACIÓN Y REACCIONES CUTÁNEAS:
+Irritación leve (enrojecimiento, picazón):
+- Es normal en las primeras aplicaciones
+- Al retirar: limpiar con aceite de bebé o aceite de coco para quitar residuo adhesivo, luego agua tibia
+- Aplicar crema de caléndula o aloe vera puro en la zona libre (no donde va el nuevo parche)
+- Dejar la piel respirar al menos 24h antes de volver a esa zona
+- No rascar — puede empeorar la reacción
+
+Irritación moderada (ampolla, sarpullido, calor intenso):
+- Retirar el parche de esa zona
+- Consultar con médico antes de colocar en la misma área
+- Cambiar a zona alternativa del calendario
+
+Residuo adhesivo:
+- Aceite de bebé + algodón durante 1-2 minutos
+- Nunca frotar seco ni usar alcohol en piel sensible
+
+MANEJO DE DOLORES DE CABEZA:
+Cefalea leve (primeras semanas — común al inicio hormonal):
+- Hidratarse bien: mínimo 2 litros de agua al día
+- Descanso en habitación oscura y fresca
+- Analgésicos seguros: paracetamol/acetaminofén (no ibuprofeno sin consulta médica en contextura delgada)
+- Compresas frías en frente o nuca
+- Suele mejorar al 2do o 3er ciclo cuando el cuerpo se adapta
+
+ALERTA ROJA de cefalea (especialmente con antecedente de taquicardia):
+- Dolor súbito muy intenso "el peor de su vida"
+- Cefalea con visión borrosa, puntos de luz o pérdida visual
+- Dolor con entumecimiento de cara/brazo
+→ Atención médica urgente, posible contraindicación del parche
+
+MANEJO DE SENSIBILIDAD EMOCIONAL Y FÍSICA:
+Cambios emocionales:
+- Completamente normal al inicio del tratamiento hormonal
+- Suele estabilizarse al 2do-3er ciclo
+- Registro de cómo se siente ayuda a identificar patrones
+- Comunicación con Luis es clave 💕
+- Si la tristeza o ansiedad es intensa y persistente: consultar al ginecólogo para ajuste
+
+Sensibilidad en mamas:
+- Muy común con EVRA al inicio
+- Sujetador de soporte suave sin arco
+- Compresas frías si hay molestia
+- Mejora con los ciclos
+
+Cambios en libido:
+- Puede subir o bajar al inicio — ambos son normales
+- El cuerpo necesita 2-3 ciclos para adaptarse
+
+Peso:
+- El parche EVRA tiene baja incidencia de aumento de peso
+- Si hay retención de líquidos leve: reducir sal, aumentar agua
+- En contextura delgada, los cambios percibidos suelen ser retención temporal, no grasa
+- Importante: no hacer dietas restrictivas durante la adaptación hormonal
+
+PRIMER USO HOY 9 DE JUNIO:
+- Zona: Brazo superior externo DERECHO
+- La protección plena se establece después de 7 días continuos de uso
+- Durante esta primera semana: recomendar método de barrera adicional
+- HOY es un día importante y especial para Lucerito 🎉
+
+PROTOCOLO DE OLVIDOS:
+Siempre preguntar primero: "¿Cuántas horas aproximadamente lleva el retraso?"
+- <24h: aplicar ahora en la zona que tocaba, próximo cambio en 7 días. Protección mantenida.
+- 24-48h: aplicar ahora, usar método de barrera 7 días adicionales.
+- >48h (Ciclo 1/2) o >7 días sin parche (Ciclo 3): consultar médico.
+
+PARCHE DESPEGADO:
+- Parcialmente: reposicionar firmemente o usar adhesivo médico (Micropore). No reemplazar.
+- Totalmente <24h: recolocar en nueva zona limpia, mantener fecha de cambio.
+- Totalmente >24h: nuevo parche, reiniciar 7 días, usar barrera.
+
+SEMANA DE DESCANSO (30 junio):
+- Esperar sangrado tipo menstrual 2-3 días después del retiro — normal
+- No es motivo de alarma
+- Nuevo ciclo comienza el 7 de julio con abdomen inferior derecho
+
+ALERTAS MÉDICAS URGENTES — responder SIEMPRE inmediatamente:
+Si menciona: dolor en el pecho, falta de aire, desmayo, cefalea súbita intensa, visión borrosa, pierna hinchada o dolorosa, palpitaciones fuertes (especialmente importante por taquicardia):
+→ Responder: "🚨 Esto requiere atención médica urgente. Por favor llama a emergencias o ve a urgencias ahora. No esperes."
+
+FORMATO:
+- Terminar SIEMPRE con: 📅 Próxima acción: [fecha] a las 20:00 — [acción] en [zona si aplica]
+- Al final incluir botones: [BTNS: texto1 | texto2 | texto3]
+- Máximo 5-6 líneas de respuesta principal`;
+
+let hist = [], busy = false;
+const MAX_HIST = 20;
+
+const EVENTS = [
+  {d:'2026-06-09',l:'Colocar Parche #1 — Ciclo 1',z:'Brazo derecho'},
+  {d:'2026-06-16',l:'Cambiar a Parche #2',z:'Brazo izquierdo'},
+  {d:'2026-06-23',l:'Cambiar a Parche #3',z:'Brazo derecho'},
+  {d:'2026-06-30',l:'Retirar parche — Inicio descanso',z:''},
+  {d:'2026-07-07',l:'Colocar Parche #1 — Ciclo 2',z:'Abdomen inferior derecho'},
+  {d:'2026-07-14',l:'Cambiar a Parche #2',z:'Glúteo izquierdo'},
+  {d:'2026-07-21',l:'Cambiar a Parche #3',z:'Muslo externo derecho'},
+  {d:'2026-07-28',l:'Retirar parche — Inicio descanso',z:''},
+  {d:'2026-08-04',l:'Colocar Parche #1 — Ciclo 3',z:'Abdomen inferior izquierdo'},
+  {d:'2026-08-11',l:'Cambiar a Parche #2',z:'Glúteo derecho'},
+  {d:'2026-08-18',l:'Cambiar a Parche #3',z:'Muslo externo izquierdo'},
+];
+
+function now(){return new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'})}
+function scroll(){setTimeout(()=>{const m=document.getElementById('msgs');m.scrollTop=m.scrollHeight},60)}
+
+function addBubble(role,html,type){
+  const msgs=document.getElementById('msgs');
+  const wrap=document.createElement('div');
+  wrap.className='msg '+(role==='user'?'user':'bot');
+  const b=document.createElement('div');
+  b.className='bubble'+(type?' '+type:'');
+  b.innerHTML=html;
+  const ts=document.createElement('span');
+  ts.className='ts';
+  ts.textContent=now();
+  wrap.appendChild(b);
+  wrap.appendChild(ts);
+  msgs.appendChild(wrap);
+  scroll();
+}
+
+function addChips(texts){
+  const msgs=document.getElementById('msgs');
+  const wrap=document.createElement('div');
+  wrap.className='chips';
+  texts.forEach(t=>{
+    const btn=document.createElement('button');
+    btn.className='chip';
+    btn.textContent=t;
+    btn.onclick=()=>{wrap.remove();q(t)};
+    wrap.appendChild(btn);
+  });
+  msgs.appendChild(wrap);
+  scroll();
+}
+
+function typing(){
+  const msgs=document.getElementById('msgs');
+  const w=document.createElement('div');
+  w.className='msg bot';w.id='typ';
+  w.innerHTML='<div class="bubble"><div class="dot-wrap"><span></span><span></span><span></span></div></div>';
+  msgs.appendChild(w);scroll();
+}
+function rmTyping(){const t=document.getElementById('typ');if(t)t.remove()}
+
+function setLock(v){
+  busy=v;
+  document.getElementById('inp').disabled=v;
+  document.getElementById('sendbtn').disabled=v;
+  document.querySelectorAll('.qbtn,.chip').forEach(b=>b.disabled=v);
+}
+
+function parseBtns(text){
+  const m=text.match(/\[BTNS:\s*(.*?)\]/);
+  if(!m)return{btns:[],clean:text};
+  const btns=m[1].split('|').map(s=>s.trim()).filter(Boolean);
+  return{btns,clean:text.replace(/\[BTNS:.*?\]/,'').trim()};
+}
+
+function renderMd(t){
+  return t
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/_(.*?)_/g,'<em>$1</em>')
+    .replace(/\n/g,'<br>');
+}
+
+async function callApi(userText){
+  hist.push({role:'user',content:userText});
+  if(hist.length>MAX_HIST) hist=hist.slice(-MAX_HIST);
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':'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','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:700,system:SYS,messages:hist})
+  });
+  if(!r.ok)throw new Error('API '+r.status);
+  const d=await r.json();
+  const raw=d.content?.[0]?.text||'No pude responder, intenta de nuevo 🙏';
+  hist.push({role:'assistant',content:raw});
+  if(hist.length>MAX_HIST) hist=hist.slice(-MAX_HIST);
+  return raw;
+}
+
+async function send(){
+  if(busy)return;
+  const inp=document.getElementById('inp');
+  const txt=inp.value.trim();
+  if(!txt)return;
+  inp.value='';inp.style.height='';
+  addBubble('user',renderMd(txt));
+  await processMsg(txt);
+}
+
+async function q(txt){
+  if(busy)return;
+  addBubble('user',renderMd(txt));
+  await processMsg(txt);
+}
+
+async function processMsg(txt){
+  setLock(true);typing();
+  try{
+    const raw=await callApi(txt);
+    rmTyping();
+    const {btns,clean}=parseBtns(raw);
+    const isAlert=clean.includes('🚨');
+    addBubble('bot',renderMd(clean),isAlert?'alert':'');
+    if(btns.length>0)addChips(btns);
+  }catch(e){
+    rmTyping();
+    addBubble('bot','Hubo un error de conexión 😔 Por favor intenta de nuevo.','warn');
+  }
+  setLock(false);
+}
+
+function updateStatus(){
+  const td=new Date().toISOString().slice(0,10);
+  const nx=EVENTS.find(e=>e.d>=td);
+  const st=document.getElementById('status-txt');
+  if(nx){
+    const diff=Math.round((new Date(nx.d+'T12:00:00')-new Date())/86400000);
+    const pre=diff<=0?'HOY':diff===1?'Mañana':'En '+diff+' día'+(diff>1?'s':'');
+    st.textContent=pre+' · '+nx.l+(nx.z?' · '+nx.z:'')+' · 20:00 hrs';
+  }
+}
+
+const inp=document.getElementById('inp');
+inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
+inp.addEventListener('input',()=>{inp.style.height='auto';inp.style.height=Math.min(inp.scrollHeight,90)+'px'});
+
+updateStatus();
+
+(async()=>{
+  setLock(true);typing();
+  try{
+    const raw=await callApi('Saluda a Lucerito con muchísima calidez. Hoy es su primer día con el parche EVRA — es un momento importante. Recuérdale que hoy coloca el Parche #1 en el Brazo superior externo DERECHO a las 20:00, y que durante la primera semana necesita método de barrera adicional. Menciona que Luis configuró este asistente para ella con amor. Sé muy concisa, cálida y motivadora. Máximo 4 líneas.');
+    rmTyping();
+    const {btns,clean}=parseBtns(raw);
+    addBubble('bot',renderMd(clean));
+    if(btns.length>0)addChips(btns);
+  }catch{
+    rmTyping();
+    addBubble('bot','¡Hola Lucerito! 💕 Soy EVRA Care, tu asistente personal configurada por Luis con mucho amor.<br><br>Hoy es tu <strong>primer día</strong> 🎉 A las 20:00 coloca el Parche #1 en tu <strong>brazo superior externo derecho</strong>. Recuerda usar método de barrera esta primera semana mientras el parche alcanza su protección plena.<br><br>📅 Próxima acción: <strong>16/06 a las 20:00</strong> — Cambiar a Parche #2 en brazo izquierdo');
+    addChips(['¿Cómo coloco el parche en el brazo?','¿Estoy protegida hoy?','Ver todas mis fechas']);
+  }
+  setLock(false);
+})();
+</script>
+</body>
+</html>
