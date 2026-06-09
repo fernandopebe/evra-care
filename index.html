@@ -71,6 +71,22 @@ body{background:#f7eef3;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',
     <button class="qbtn" onclick="q('Tengo dolor de cabeza desde que empecé el parche')">🤕 Dolor de cabeza</button>
     <button class="qbtn" onclick="q('Me siento muy sensible emocionalmente, ¿es normal con el EVRA?')">💭 Sensibilidad</button>
     <button class="qbtn" onclick="q('Olvidé cambiar el parche, ¿qué hago?')">⚠️ Olvidé el cambio</button>
+    <button class="qbtn g" onclick="showCalModal()">🗓️ Agregar al Calendar</button>
+  </div>
+
+  <!-- Modal Calendar -->
+  <div id="cal-modal" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.45);z-index:100;align-items:center;justify-content:center;border-radius:20px">
+    <div style="background:#fff;border-radius:16px;padding:20px;width:90%;max-width:400px;max-height:80%;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <strong style="color:#D4537E;font-size:15px">🗓️ Agregar eventos al Calendar</strong>
+        <button onclick="hideCalModal()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#999">✕</button>
+      </div>
+      <p style="font-size:12px;color:#888;margin-bottom:14px">Haz clic en cada evento para abrirlo en Google Calendar y guardarlo con un solo clic.</p>
+      <div id="cal-list"></div>
+      <button onclick="addAllCal()" style="width:100%;margin-top:12px;padding:10px;background:linear-gradient(135deg,#D4537E,#e87fa8);color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer">
+        📅 Abrir todos en Google Calendar
+      </button>
+    </div>
   </div>
   <div id="inputrow">
     <textarea id="inp" placeholder="Escríbeme tu consulta sobre EVRA…" rows="1"></textarea>
@@ -249,6 +265,71 @@ FORMATO:
 let hist = [], busy = false;
 const MAX_HIST = 20;
 
+const CAL_EVENTS = [
+  {d:'2026-06-09',title:'🩹 EVRA — Colocar Parche #1',desc:'Ciclo 1 · Zona: Brazo superior externo DERECHO\n\nRecuerda: limpiar la zona con agua y jabón, secar bien y presionar 30 segundos.\n⚠️ Esta primera semana usar método de barrera adicional.',color:'11'},
+  {d:'2026-06-16',title:'🩹 EVRA — Cambiar a Parche #2',desc:'Ciclo 1 · Zona: Brazo superior externo IZQUIERDO\n\nRetira el parche anterior, limpia residuo con aceite de bebé.\nColoca el nuevo en el brazo izquierdo.',color:'11'},
+  {d:'2026-06-23',title:'🩹 EVRA — Cambiar a Parche #3',desc:'Ciclo 1 · Zona: Brazo superior externo DERECHO\n\nÚltimo parche del ciclo 1. Próximo paso: retiro el 30/06.',color:'11'},
+  {d:'2026-06-30',title:'🩹 EVRA — Retirar parche · Inicio descanso',desc:'Ciclo 1 · Retira el Parche #3 hoy.\n\nInicia semana de descanso. Es normal tener sangrado tipo menstrual en 2-3 días.\nNuevo ciclo comienza el 07/07.',color:'6'},
+  {d:'2026-07-07',title:'🩹 EVRA — Colocar Parche #1 Ciclo 2',desc:'Ciclo 2 · Zona: Abdomen inferior DERECHO\n\n2 dedos por debajo del ombligo. Evitar cinturilla del pantalón.',color:'11'},
+  {d:'2026-07-14',title:'🩹 EVRA — Cambiar a Parche #2',desc:'Ciclo 2 · Zona: Glúteo IZQUIERDO\n\nCuadrante superior externo. Evitar zona de roce con ropa interior.',color:'11'},
+  {d:'2026-07-21',title:'🩹 EVRA — Cambiar a Parche #3',desc:'Ciclo 2 · Zona: Muslo externo DERECHO\n\nParte externa del muslo, tercio superior. Evitar zona interna.',color:'11'},
+  {d:'2026-07-28',title:'🩹 EVRA — Retirar parche · Inicio descanso',desc:'Ciclo 2 · Semana de descanso. Nuevo ciclo el 04/08.',color:'6'},
+  {d:'2026-08-04',title:'🩹 EVRA — Colocar Parche #1 Ciclo 3',desc:'Ciclo 3 · Zona: Abdomen inferior IZQUIERDO',color:'11'},
+  {d:'2026-08-11',title:'🩹 EVRA — Cambiar a Parche #2',desc:'Ciclo 3 · Zona: Glúteo DERECHO',color:'11'},
+  {d:'2026-08-18',title:'🩹 EVRA — Cambiar a Parche #3',desc:'Ciclo 3 · Zona: Muslo externo IZQUIERDO',color:'11'},
+  {d:'2026-08-25',title:'🩹 EVRA — Retirar parche · Inicio descanso',desc:'Ciclo 3 · Semana de descanso. Nuevo ciclo el 01/09.',color:'6'},
+  {d:'2026-09-01',title:'🩹 EVRA — Colocar Parche #1 Ciclo 4',desc:'Ciclo 4 · Zona: Espalda baja DERECHA (escapular baja)\n\nNecesitas ayuda para colocarlo. Luis puede ayudarte 💕',color:'11'},
+  {d:'2026-09-08',title:'🩹 EVRA — Cambiar a Parche #2',desc:'Ciclo 4 · Zona: Abdomen inferior DERECHO',color:'11'},
+  {d:'2026-09-15',title:'🩹 EVRA — Cambiar a Parche #3',desc:'Ciclo 4 · Zona: Glúteo IZQUIERDO',color:'11'},
+  {d:'2026-09-22',title:'🩹 EVRA — Retirar parche · Inicio descanso',desc:'Ciclo 4 · Semana de descanso.',color:'6'},
+];
+
+function makeCalUrl(ev){
+  const dt=ev.d.replace(/-/g,'');
+  // start 20:00 Lima = 01:00 UTC next day
+  const start=dt+'T010000Z';
+  // end 20:30 Lima
+  const endDate=new Date(ev.d+'T01:30:00Z');
+  const endStr=endDate.toISOString().replace(/[-:]/g,'').replace('.000','');
+  const title=encodeURIComponent(ev.title);
+  const desc=encodeURIComponent(ev.desc+'\n\n⏰ Recuerda: 8:00 PM hora Lima');
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${endStr}&details=${desc}&ctz=America/Lima`;
+}
+
+function showCalModal(){
+  const list=document.getElementById('cal-list');
+  list.innerHTML='';
+  CAL_EVENTS.forEach((ev,i)=>{
+    const d=new Date(ev.d+'T12:00:00');
+    const label=d.toLocaleDateString('es-PE',{weekday:'short',day:'numeric',month:'short'});
+    const isRetiro=ev.title.includes('Retirar');
+    const div=document.createElement('div');
+    div.style.cssText='display:flex;align-items:center;gap:10px;padding:8px 10px;margin-bottom:6px;border-radius:10px;border:1px solid #f0c0d4;background:#fff5f9;cursor:pointer;transition:background .15s';
+    div.onmouseenter=()=>div.style.background='#fce4ec';
+    div.onmouseleave=()=>div.style.background='#fff5f9';
+    div.onclick=()=>window.open(makeCalUrl(ev),'_blank');
+    div.innerHTML=`
+      <div style="width:36px;height:36px;border-radius:8px;background:${isRetiro?'#e8eaf6':'#fce4ec'};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${isRetiro?'🔴':'🩹'}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ev.title.replace('🩹 EVRA — ','')}</div>
+        <div style="font-size:11px;color:#D4537E">${label} · 20:00 hrs</div>
+      </div>
+      <div style="font-size:18px">↗️</div>`;
+    list.appendChild(div);
+  });
+  document.getElementById('cal-modal').style.display='flex';
+}
+
+function hideCalModal(){
+  document.getElementById('cal-modal').style.display='none';
+}
+
+function addAllCal(){
+  CAL_EVENTS.forEach((ev,i)=>{
+    setTimeout(()=>window.open(makeCalUrl(ev),'_blank'),i*400);
+  });
+}
+
 const EVENTS = [
   {d:'2026-06-09',l:'Colocar Parche #1 — Ciclo 1',z:'Brazo derecho'},
   {d:'2026-06-16',l:'Cambiar a Parche #2',z:'Brazo izquierdo'},
@@ -330,9 +411,9 @@ function renderMd(t){
 async function callApi(userText){
   hist.push({role:'user',content:userText});
   if(hist.length>MAX_HIST) hist=hist.slice(-MAX_HIST);
-  const r=await fetch('https://api.anthropic.com/v1/messages',{
+  const r=await fetch('https://evra-care-proxy.luisfenandopebe.workers.dev',{
     method:'POST',
-    headers:{'Content-Type':'application/json','x-api-key':'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','anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    headers:{'Content-Type':'application/json'},
     body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:700,system:SYS,messages:hist})
   });
   if(!r.ok)throw new Error('API '+r.status);
